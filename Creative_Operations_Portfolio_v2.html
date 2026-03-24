@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Creative Operations — Portfolio Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#09090f;--s1:#111118;--s2:#18181f;--s3:#1f1f28;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#eeeae3;--muted:#6e6e82;--muted2:#9a9ab0;
+  --gold:#c8a46a;--gold2:#e4cfa0;
+
+  /* Health colors */
+  --at-risk:#ff4d4d;
+  --at-risk-bg:rgba(255,77,77,0.12);
+  --slipping:#f5a623;
+  --slipping-bg:rgba(245,166,35,0.12);
+  --on-track:#3ecf8e;
+  --on-track-bg:rgba(62,207,142,0.12);
+  --ahead:#4a9eff;
+  --ahead-bg:rgba(74,158,255,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;font-weight:300;min-height:100vh;overflow-x:hidden;}
+
+/* NAV */
+nav{display:flex;align-items:center;padding:0 48px;height:60px;border-bottom:1px solid var(--border);background:var(--s1);position:sticky;top:0;z-index:100;gap:0;}
+.nav-brand{font-family:"Playfair Display",serif;font-size:15px;color:var(--gold);letter-spacing:.05em;margin-right:24px;white-space:nowrap;}
+.nav-tabs{display:flex;gap:2px;flex:1;}
+.nav-tab{padding:8px 18px;border-radius:8px;font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;background:none;border:none;font-family:"DM Sans",sans-serif;transition:all .15s;}
+.nav-tab:hover{color:var(--text);background:var(--s3);}
+.nav-tab.active{color:var(--gold);background:rgba(200,164,106,.1);}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:20px;}
+.nav-today{font-size:11px;color:var(--muted);white-space:nowrap;}
+.nav-today span{color:var(--gold2);}
+.health-mini{display:flex;gap:6px;align-items:center;}
+.hm-pill{font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;cursor:pointer;transition:opacity .15s;}
+.hm-pill:hover{opacity:.8;}
+
+main{padding:36px 48px;max-width:1700px;}
+.view{display:none;}.view.active{display:block;}
+
+/* ── HEALTH BADGES ── */
+.hbadge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:.04em;white-space:nowrap;}
+.hbadge::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.hbadge.at-risk{background:var(--at-risk-bg);color:var(--at-risk);}
+.hbadge.at-risk::before{background:var(--at-risk);}
+.hbadge.slipping{background:var(--slipping-bg);color:var(--slipping);}
+.hbadge.slipping::before{background:var(--slipping);}
+.hbadge.on-track{background:var(--on-track-bg);color:var(--on-track);}
+.hbadge.on-track::before{background:var(--on-track);}
+.hbadge.ahead{background:var(--ahead-bg);color:var(--ahead);}
+.hbadge.ahead::before{background:var(--ahead);}
+
+.hbadge-label{font-size:10px;font-weight:600;letter-spacing:.04em;}
+
+/* ── STATUS VIEW ── */
+.status-header{margin-bottom:32px;}
+.status-header h2{font-family:"Playfair Display",serif;font-size:28px;font-weight:600;margin-bottom:6px;}
+.status-header p{color:var(--muted);font-size:13px;}
+
+.health-summary-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:36px;}
+.hsb-card{border-radius:12px;padding:20px 22px;border:1px solid;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.hsb-card:hover{transform:translateY(-2px);}
+.hsb-card.at-risk{background:var(--at-risk-bg);border-color:rgba(255,77,77,.25);}
+.hsb-card.slipping{background:var(--slipping-bg);border-color:rgba(245,166,35,.25);}
+.hsb-card.on-track{background:var(--on-track-bg);border-color:rgba(62,207,142,.25);}
+.hsb-card.ahead{background:var(--ahead-bg);border-color:rgba(74,158,255,.25);}
+.hsb-num{font-family:"Playfair Display",serif;font-size:48px;font-weight:700;line-height:1;}
+.hsb-card.at-risk .hsb-num{color:var(--at-risk);}
+.hsb-card.slipping .hsb-num{color:var(--slipping);}
+.hsb-card.on-track .hsb-num{color:var(--on-track);}
+.hsb-card.ahead .hsb-num{color:var(--ahead);}
+.hsb-label{font-size:13px;font-weight:600;margin-top:4px;}
+.hsb-card.at-risk .hsb-label{color:var(--at-risk);}
+.hsb-card.slipping .hsb-label{color:var(--slipping);}
+.hsb-card.on-track .hsb-label{color:var(--on-track);}
+.hsb-card.ahead .hsb-label{color:var(--ahead);}
+.hsb-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+.hsb-icon{position:absolute;right:20px;top:16px;font-size:28px;opacity:.25;}
+
+.status-section{margin-bottom:36px;}
+.status-section-title{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.status-section-title h3{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;}
+
+.status-project-row{background:var(--s1);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;transition:all .2s;}
+.status-project-row:hover{border-color:var(--border2);}
+.spr-header{display:grid;grid-template-columns:2fr 1fr 1.5fr 2fr;gap:16px;padding:16px 20px;cursor:pointer;align-items:center;}
+.spr-name{font-size:13px;font-weight:500;}
+.spr-workflow{font-size:11px;color:var(--muted);}
+.spr-note{font-size:11px;color:var(--muted2);line-height:1.5;}
+.spr-expand{font-size:10px;color:var(--muted);text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;}
+
+.spr-steps{display:none;border-top:1px solid var(--border);padding:12px 20px 16px;}
+.spr-steps.open{display:block;}
+.spr-steps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-top:10px;}
+.step-chip{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;flex-direction:column;gap:4px;}
+.step-chip-id{font-size:10px;font-weight:600;}
+.step-chip-name{font-size:11px;color:var(--text);line-height:1.4;}
+.step-chip-date{font-size:10px;color:var(--muted);}
+.step-chip.at-risk{border-left:3px solid var(--at-risk);}
+.step-chip.slipping{border-left:3px solid var(--slipping);}
+.step-chip.on-track{border-left:3px solid var(--on-track);}
+.step-chip.ahead{border-left:3px solid var(--ahead);}
+
+/* ── PORTFOLIO VIEW ── */
+.portfolio-header{display:flex;align-items:baseline;gap:16px;margin-bottom:28px;}
+.portfolio-header h2{font-family:"Playfair Display",serif;font-size:28px;font-weight:600;}
+.portfolio-header p{color:var(--muted);font-size:13px;}
+.portfolio-filters{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;}
+.pf-btn{padding:6px 16px;border-radius:20px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:11px;font-family:"DM Sans",sans-serif;cursor:pointer;transition:all .15s;letter-spacing:.05em;}
+.pf-btn:hover{border-color:var(--gold);color:var(--gold);}
+.pf-btn.active{background:var(--gold);border-color:var(--gold);color:#000;font-weight:600;}
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;}
+.project-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:22px 24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.project-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.4);}
+.project-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;}
+.project-card.at-risk::before{background:var(--at-risk);}
+.project-card.slipping::before{background:var(--slipping);}
+.project-card.on-track::before{background:var(--on-track);}
+.project-card.ahead::before{background:var(--ahead);}
+.pc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.pc-name{font-size:14px;font-weight:500;color:var(--text);line-height:1.3;flex:1;margin-right:12px;}
+.pc-workflow{font-size:11px;color:var(--muted);margin-bottom:10px;}
+.pc-health-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.pc-status-small{font-size:10px;padding:2px 8px;border-radius:8px;background:var(--s3);color:var(--muted2);}
+.pc-bar-wrap{margin-bottom:12px;}
+.pc-bar-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:5px;}
+.pc-bar{height:5px;background:var(--s3);border-radius:3px;overflow:hidden;}
+.pc-bar-fill{height:100%;border-radius:3px;}
+.pc-stats{display:flex;gap:12px;margin-bottom:12px;}
+.pc-stat{text-align:center;}
+.pc-stat-num{font-size:16px;font-weight:600;font-family:"Playfair Display",serif;line-height:1;}
+.pc-stat-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px;}
+.pc-dates{font-size:10px;color:var(--muted);margin-bottom:10px;}
+.pc-next{font-size:10px;color:var(--muted);line-height:1.7;border-top:1px solid var(--border);padding-top:10px;}
+.pc-next strong{color:var(--gold2);font-weight:500;}
+.pc-health-note{font-size:10px;color:var(--muted2);line-height:1.6;border-top:1px solid var(--border);padding-top:10px;margin-top:4px;}
+.needs-dates-warning{display:inline-block;font-size:10px;color:var(--slipping);background:var(--slipping-bg);padding:2px 8px;border-radius:8px;margin-bottom:8px;}
+
+/* THIS WEEK */
+.week-header{margin-bottom:28px;}
+.week-header h2{font-family:"Playfair Display",serif;font-size:28px;font-weight:600;margin-bottom:6px;}
+.week-header p{color:var(--muted);font-size:13px;}
+.week-group{margin-bottom:28px;}
+.week-group-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.week-group-badge{font-size:10px;padding:2px 8px;border-radius:8px;background:var(--s2);color:var(--muted2);}
+.week-item{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:13px 18px;margin-bottom:8px;display:grid;grid-template-columns:3fr 1.5fr 1fr 1fr 1fr;gap:12px;align-items:center;transition:background .15s;cursor:pointer;}
+.week-item:hover{background:var(--s2);}
+.wi-name{font-size:12px;color:var(--text);}
+.wi-step{font-size:10px;color:var(--muted);margin-top:2px;}
+.wi-phase{font-size:10px;color:var(--muted2);}
+.wi-date{font-size:11px;color:var(--muted2);}
+.wi-status{font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;text-align:center;}
+.wi-status.in-progress{background:rgba(74,158,255,.15);color:#4a9eff;}
+.wi-status.upcoming{background:rgba(167,139,250,.15);color:#a78bfa;}
+
+/* TIMELINE */
+.tl-controls{display:flex;gap:10px;margin-bottom:20px;align-items:center;flex-wrap:wrap;}
+.tl-controls .filter-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+.tf-btn{padding:5px 14px;border-radius:16px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:11px;font-family:"DM Sans",sans-serif;cursor:pointer;transition:all .15s;}
+.tf-btn:hover{border-color:var(--gold);color:var(--gold);}
+.tf-btn.active{background:var(--gold);border-color:var(--gold);color:#000;font-weight:600;}
+.tl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--s1);}
+.tl-inner{min-width:1400px;}
+.tl-project-row{display:grid;border-bottom:1px solid var(--border);transition:background .15s;cursor:pointer;}
+.tl-project-row:hover{background:rgba(255,255,255,.02);}
+.tl-project-row:last-child{border-bottom:none;}
+.tl-label{padding:12px 18px;font-size:11px;border-right:1px solid var(--border);display:flex;align-items:center;gap:8px;min-height:48px;}
+.tl-bar-area{padding:8px 12px;position:relative;display:flex;align-items:center;min-height:48px;}
+.tl-bar{height:22px;border-radius:4px;position:absolute;display:flex;align-items:center;padding:0 8px;font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.tl-bar:hover{filter:brightness(1.2);}
+.tl-today-line{position:absolute;top:0;bottom:0;width:2px;background:rgba(240,96,96,.8);z-index:5;pointer-events:none;}
+.tl-month-gl{position:absolute;top:0;bottom:0;width:1px;background:var(--border);pointer-events:none;}
+.tl-month-lbl{position:absolute;font-size:10px;color:var(--muted);letter-spacing:.05em;top:50%;transform:translateY(-50%);padding-left:6px;}
+
+/* DETAIL */
+.detail-back{display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--muted);font-size:12px;margin-bottom:28px;transition:color .15s;width:fit-content;}
+.detail-back:hover{color:var(--text);}
+.detail-title{font-family:"Playfair Display",serif;font-size:32px;font-weight:700;}
+.detail-hero{margin-bottom:32px;}
+.detail-hero-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:24px;}
+.detail-stats{display:flex;gap:12px;flex-shrink:0;}
+.detail-stat{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:14px 20px;text-align:center;}
+.detail-stat-num{font-family:"Playfair Display",serif;font-size:28px;font-weight:700;line-height:1;}
+.detail-stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:4px;}
+.steps-table{width:100%;border-collapse:collapse;background:var(--s1);border-radius:12px;overflow:hidden;border:1px solid var(--border);}
+.steps-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:12px 16px;border-bottom:1px solid var(--border);background:var(--s2);font-weight:500;}
+.steps-table td{padding:12px 16px;font-size:12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.steps-table tr:last-child td{border-bottom:none;}
+.steps-table tr:hover td{background:rgba(255,255,255,.02);}
+.st-status{font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;white-space:nowrap;}
+.st-status.completed{background:rgba(62,207,142,.15);color:var(--on-track);}
+.st-status.in-progress{background:rgba(74,158,255,.15);color:#4a9eff;}
+.st-status.upcoming{background:rgba(167,139,250,.15);color:#a78bfa;}
+.st-status.needs{background:var(--slipping-bg);color:var(--slipping);}
+
+/* PANEL */
+.side-panel{position:fixed;right:-420px;top:0;width:400px;height:100vh;background:var(--s1);border-left:1px solid var(--border2);z-index:200;transition:right .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding:32px 28px;}
+.side-panel.open{right:0;}
+.panel-close{position:absolute;top:18px;right:18px;width:30px;height:30px;background:var(--s2);border:1px solid var(--border);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;transition:all .15s;}
+.panel-close:hover{color:var(--text);}
+.panel-section{margin-bottom:18px;}
+.panel-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;}
+.panel-value{font-size:13px;color:var(--text);line-height:1.5;}
+.panel-title{font-family:"Playfair Display",serif;font-size:20px;font-weight:600;margin-bottom:20px;line-height:1.3;}
+.panel-project{font-size:11px;color:var(--gold);margin-bottom:4px;letter-spacing:.05em;}
+.panel-divider{height:1px;background:var(--border);margin:18px 0;}
+.panel-health-block{border-radius:10px;padding:14px 16px;margin-bottom:18px;}
+.panel-health-block.at-risk{background:var(--at-risk-bg);border:1px solid rgba(255,77,77,.2);}
+.panel-health-block.slipping{background:var(--slipping-bg);border:1px solid rgba(245,166,35,.2);}
+.panel-health-block.on-track{background:var(--on-track-bg);border:1px solid rgba(62,207,142,.2);}
+.panel-health-block.ahead{background:var(--ahead-bg);border:1px solid rgba(74,158,255,.2);}
+.panel-health-note{font-size:12px;color:var(--muted2);line-height:1.6;margin-top:6px;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">Creative Ops</span>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('portfolio')">Portfolio</button>
+    <button class="nav-tab" onclick="showView('status')">Health</button>
+    <button class="nav-tab" onclick="showView('week')">This Week</button>
+    <button class="nav-tab" onclick="showView('timeline')">Timeline</button>
+    <button class="nav-tab" id="detail-tab" style="display:none" onclick="showView('detail')">← Project</button>
+  </div>
+  <div class="nav-right">
+    <div class="health-mini" id="health-mini"></div>
+    <div class="nav-today">Today <span id="today-display"></span></div>
+  </div>
+</nav>
+
+<main>
+
+<!-- PORTFOLIO -->
+<div id="view-portfolio" class="view active">
+  <div class="portfolio-header">
+    <h2>All Projects</h2>
+    <p id="portfolio-subtitle"></p>
+  </div>
+  <div class="portfolio-filters">
+    <button class="pf-btn active" onclick="filterPortfolio('all',this)">All</button>
+    <button class="pf-btn" onclick="filterPortfolio('at-risk',this)">⚠ At Risk</button>
+    <button class="pf-btn" onclick="filterPortfolio('slipping',this)">↘ Slipping</button>
+    <button class="pf-btn" onclick="filterPortfolio('on-track',this)">✓ On Track</button>
+    <button class="pf-btn" onclick="filterPortfolio('ahead',this)">↑ Ahead</button>
+  </div>
+  <div class="project-grid" id="project-grid"></div>
+</div>
+
+<!-- HEALTH / STATUS -->
+<div id="view-status" class="view">
+  <div class="status-header">
+    <h2>Project Health</h2>
+    <p id="status-subtitle"></p>
+  </div>
+  <div class="health-summary-bar" id="health-summary-bar"></div>
+  <div id="status-sections"></div>
+</div>
+
+<!-- THIS WEEK -->
+<div id="view-week" class="view">
+  <div class="week-header">
+    <h2>This Week</h2>
+    <p id="week-subtitle"></p>
+  </div>
+  <div id="week-content"></div>
+</div>
+
+<!-- TIMELINE -->
+<div id="view-timeline" class="view">
+  <div class="tl-controls">
+    <span class="filter-label">Filter:</span>
+    <button class="tf-btn active" onclick="setTlFilter('all',this)">All Projects</button>
+    <button class="tf-btn" onclick="setTlFilter('at-risk',this)">At Risk</button>
+    <button class="tf-btn" onclick="setTlFilter('slipping',this)">Slipping</button>
+    <button class="tf-btn" onclick="setTlFilter('on-track',this)">On Track</button>
+    <button class="tf-btn" onclick="setTlFilter('ahead',this)">Ahead</button>
+  </div>
+  <div class="tl-wrap"><div class="tl-inner" id="tl-inner"></div></div>
+</div>
+
+<!-- DETAIL -->
+<div id="view-detail" class="view">
+  <div class="detail-back" onclick="showView('portfolio')">← All Projects</div>
+  <div id="detail-content"></div>
+</div>
+
+</main>
+
+<div class="side-panel" id="side-panel">
+  <div class="panel-close" onclick="closePanel()">✕</div>
+  <div id="panel-content"></div>
+</div>
+
+<script>
+const TODAY = new Date();
+const PROJECTS = [{"name": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "status": "In Progress", "total": 8, "completed": 3, "current": 1, "upcoming": 4, "needs_dates": 0, "first": "2025-11-03", "last": "2026-05-16", "next3": "CO4 \u2014 Executive Storyline + Readout Draft (Feb 23) | CO5 \u2014 Cross-Functional Review + Revisions (Mar 23) | CO6 \u2014 Final Recommendations + Archive Package (Apr 13)", "health": "slipping", "health_note": "Executive readout draft 3 days behind original schedule; cross-functional review window compressed."}, {"name": "2026 Holiday", "workflow": "Holiday Expanded", "status": "Upcoming", "total": 21, "completed": 4, "current": 0, "upcoming": 17, "needs_dates": 0, "first": "2026-03-13", "last": "2026-06-26", "next3": "10E \u2014 Channels Submit / Align on Asset Requests (Mar 19) | 10F \u2014 Brand Marketing Re-Brief (Mar 20) | 10G \u2014 Pre-CD Alignment (Mar 23)", "health": "at-risk", "health_note": "CD R1 and Pre-CD Alignment both landing same week. Creative bandwidth conflict flagged by Ops."}, {"name": "2027 Campaign", "workflow": "Campaign", "status": "Upcoming", "total": 38, "completed": 0, "current": 0, "upcoming": 1, "needs_dates": 37, "first": "2026-05-11", "last": "2026-05-11", "next3": "9 \u2014 Brief Creative (May 11)", "health": "slipping", "health_note": "37 of 38 steps still need dates. Brief Creative anchor confirmed but planning not yet initiated."}, {"name": "Brand Codes", "workflow": "Strategy", "status": "In Progress", "total": 15, "completed": 1, "current": 3, "upcoming": 11, "needs_dates": 0, "first": "2026-03-09", "last": "2026-06-15", "next3": "BC2 \u2014 Stakeholder Interviews (Mar 09) | BC3 \u2014 Consumer / Cultural Research + Synthesis (Mar 09) | BC4 \u2014 Codes Audit + Category Analysis (Mar 09)", "health": "on-track", "health_note": "Revised pacing approved. Phase 1 running concurrently as planned."}, {"name": "Copy Architecture", "workflow": "Review Sprint", "status": "In Progress", "total": 13, "completed": 8, "current": 1, "upcoming": 4, "needs_dates": 0, "first": "2026-02-24", "last": "2026-03-31", "next3": "CA9 \u2014 CD R3 (Mar 18) | CA10 \u2014 PM R5 (Mar 25) | CA11 \u2014 CD R4 (Mar 27)", "health": "ahead", "health_note": "8 of 13 steps complete. On pace to close out ahead of Mar 31 deadline."}, {"name": "Digital Evolution", "workflow": "Digital Rollout", "status": "Upcoming", "total": 7, "completed": 0, "current": 0, "upcoming": 7, "needs_dates": 0, "first": "2026-03-23", "last": "2026-06-01", "next3": "DE1 \u2014 Shoot / Content Capture (Mar 23) | DE2 \u2014 eComm Layout Reviews (Apr 02) | DE3 \u2014 Handoff (Apr 24)", "health": "on-track", "health_note": "Shoot kicking off on schedule Mar 23. Aligned to Elevated Heros rollout."}, {"name": "Elevated Heros Site", "workflow": "Digital Rollout", "status": "Upcoming", "total": 12, "completed": 0, "current": 0, "upcoming": 12, "needs_dates": 0, "first": "2026-03-23", "last": "2026-06-01", "next3": "EH1 \u2014 Shoot (Mar 23) | EH2 \u2014 eComm Layout Review (Apr 02) | EH3 \u2014 eComm Layout Review with Kim / PM R1 (Apr 07)", "health": "on-track", "health_note": "Shoot confirmed Mar 23. eComm layout reviews queued and resourced."}, {"name": "Expressives", "workflow": "Event", "status": "In Progress", "total": 6, "completed": 1, "current": 1, "upcoming": 4, "needs_dates": 0, "first": "2026-03-16", "last": "2026-04-24", "next3": "EV2 \u2014 Creative Development (Mar 17) | EV3 \u2014 Production Planning (Mar 23) | EV4 \u2014 Final Prep + QA (Apr 06)", "health": "ahead", "health_note": "Creative development tracking ahead. Production planning starts Mar 23 as planned."}, {"name": "Lichtenstein", "workflow": "Art Partnership", "status": "In Progress", "total": 42, "completed": 17, "current": 3, "upcoming": 22, "needs_dates": 0, "first": "2025-08-19", "last": "2026-10-21", "next3": "LT-D1 \u2014 Pre-Production Planning / Content Gathering (Jan 26) | LT-A9 \u2014 Payment #2 Due to Estate (Mar 02) | LT-B6 \u2014 EY R2 / Final (Mar 18)", "health": "at-risk", "health_note": "Track D (Making Of) window spans 6 months \u2014 capacity risk if estate approvals delayed. Payment #2 pending."}, {"name": "NBA", "workflow": "Event", "status": "In Progress", "total": 6, "completed": 1, "current": 1, "upcoming": 4, "needs_dates": 0, "first": "2026-03-16", "last": "2026-04-24", "next3": "EV2 \u2014 Creative Development (Mar 17) | EV3 \u2014 Production Planning (Mar 23) | EV4 \u2014 Final Prep + QA (Apr 06)", "health": "on-track", "health_note": "Mirrors Expressives timeline. Creative dev and production planning on schedule."}, {"name": "SEO w Internal Team", "workflow": "", "status": "", "total": 0, "completed": 0, "current": 0, "upcoming": 0, "needs_dates": 0, "first": null, "last": null, "next3": "", "health": "slipping", "health_note": "Kickoff not yet confirmed for Apr 1. Internal resource assignment outstanding."}, {"name": "SEO w Silverside Heritage", "workflow": "", "status": "", "total": 0, "completed": 0, "current": 0, "upcoming": 0, "needs_dates": 0, "first": null, "last": null, "next3": "", "health": "on-track", "health_note": "Silverside confirmed for Apr 6 kickoff. Scripting timeline aligned."}, {"name": "Social Strategy", "workflow": "Strategy", "status": "Upcoming", "total": 7, "completed": 0, "current": 0, "upcoming": 7, "needs_dates": 0, "first": "2026-05-12", "last": "2026-06-12", "next3": "SS1 \u2014 Social Strategy Kickoff (May 12) | SS2 \u2014 Platform + Channel Strategy (May 12) | SS3 \u2014 Content Pillars + Narrative (May 18)", "health": "on-track", "health_note": "May 12 kickoff locked. Platform strategy and content pillars scoped."}, {"name": "TCA Integration", "workflow": "Partnership / Film", "status": "Upcoming", "total": 14, "completed": 3, "current": 0, "upcoming": 11, "needs_dates": 0, "first": "2025-10-31", "last": "2027-04-10", "next3": "TCA4 \u2014 BTS Kickoff + Questions (Mar 23) | TCA5 \u2014 Carolyn Review 1 (Mar 30) | TCA10 \u2014 Amplification Brief Development (Apr 01)", "health": "slipping", "health_note": "BTS Kickoff delayed \u2014 original window was Mar 16, now Mar 23. Amplification brief needs owner."}, {"name": "Windows Q2", "workflow": "VM / Retail", "status": "In Progress", "total": 17, "completed": 9, "current": 2, "upcoming": 6, "needs_dates": 0, "first": "2026-01-05", "last": "2026-05-15", "next3": "W11 \u2014 Prototype Round 2 (Refreshment + Adjustment) (Mar 17) | W10 \u2014 Round 1 Prototype Review EY (Mar 18) | W14 \u2014 R1 Distro Order \u2013 RFP (Mar 23)", "health": "at-risk", "health_note": "Round 2 approvals, final signoff, and RFP all landing same week (Mar 24\u201325). High collision risk."}];
+const STEPS = [{"project": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "step_id": "CO1", "step_name": "Close-Out Kickoff + Success Criteria Alignment", "phase": "Wrap Planning", "team": "Creative Ops / Leadership", "start": "2025-11-03", "end": "2025-11-07", "milestone": null, "status": "Completed", "notes": "Start confirmed: Nov 2025.", "health": null}, {"project": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "step_id": "CO2", "step_name": "Performance Data Collection + Asset Audit", "phase": "Data Collection", "team": "Analytics / Creative Ops", "start": "2025-11-10", "end": "2026-01-30", "milestone": null, "status": "Completed", "notes": "Capture channel, asset, and campaign performance for close-out.", "health": null}, {"project": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "step_id": "CO3", "step_name": "Holiday / Campaign Learnings Synthesis", "phase": "Analysis", "team": "Strategy / Analytics", "start": "2026-02-02", "end": "2026-02-20", "milestone": null, "status": "Completed", "notes": "Synthesis of learnings into wrap narrative.", "health": null}, {"project": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "step_id": "CO4", "step_name": "Executive Storyline + Readout Draft", "phase": "Readout Prep", "team": "Strategy / Creative Ops", "start": "2026-02-23", "end": "2026-03-20", "milestone": null, "status": "In Progress", "notes": "Build readout and recommendation narrative.", "health": "slipping"}, {"project": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "step_id": "CO5", "step_name": "Cross-Functional Review + Revisions", "phase": "Readout Prep", "team": "Leadership / PM", "start": "2026-03-23", "end": "2026-04-10", "milestone": null, "status": "Upcoming", "notes": "Incorporate feedback from leadership and partners.", "health": "slipping"}, {"project": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "step_id": "CO6", "step_name": "Final Recommendations + Archive Package", "phase": "Finalization", "team": "Creative Ops / PM", "start": "2026-04-13", "end": "2026-05-01", "milestone": null, "status": "Upcoming", "notes": "Finalize recommendations, archive files, and prep wrap materials.", "health": "on-track"}, {"project": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "step_id": "CO7", "step_name": "Final Wrap Alignment", "phase": "Finalization", "team": "Leadership / Creative Ops", "start": "2026-05-04", "end": "2026-05-15", "milestone": null, "status": "Upcoming", "notes": "Final stakeholder alignment before wrap.", "health": null}, {"project": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "step_id": "CO8", "step_name": "Campaign Close-Out Complete", "phase": "Wrap Complete", "team": "All Teams", "start": "2026-05-16", "end": "2026-05-16", "milestone": "2026-05-16", "status": "Upcoming", "notes": "Wrap confirmed for May 16, 2026.", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10A", "step_name": "Comm Architecture Alignment", "phase": "Creative Concepting", "team": "Strategy", "start": "2026-03-13", "end": "2026-03-13", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10B", "step_name": "Overall Asset Request Framework Shared", "phase": "Creative Concepting", "team": "Strategy", "start": "2026-03-16", "end": "2026-03-16", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10C", "step_name": "Comms Architecture + Creative Asset Grid Shareout to Channels", "phase": "Creative Concepting", "team": "Strategy / Channels", "start": "2026-03-17", "end": "2026-03-17", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10D", "step_name": "CD Production Alignment Review + Creative Talent Shortlist", "phase": "Creative Concepting", "team": "Creative / Ops / Production", "start": "2026-03-17", "end": "2026-03-17", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10E", "step_name": "Channels Submit / Align on Asset Requests", "phase": "Creative Concepting", "team": "Channels / Strategy", "start": "2026-03-19", "end": "2026-03-19", "milestone": null, "status": "Upcoming", "notes": "", "health": "slipping"}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10F", "step_name": "Brand Marketing Re-Brief", "phase": "Creative Concepting", "team": "Brand Marketing / Creative", "start": "2026-03-20", "end": "2026-03-20", "milestone": null, "status": "Upcoming", "notes": "", "health": "on-track"}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10G", "step_name": "Pre-CD Alignment", "phase": "Creative Concepting", "team": "Brand / Ops / Production / Creative", "start": "2026-03-23", "end": "2026-03-23", "milestone": null, "status": "Upcoming", "notes": "", "health": "at-risk"}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10H", "step_name": "CD R1", "phase": "Creative Concepting", "team": "Creative Leadership", "start": "2026-03-25", "end": "2026-03-25", "milestone": null, "status": "Upcoming", "notes": "", "health": "at-risk"}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10I", "step_name": "EY Review", "phase": "Creative Concepting", "team": "EY / Leadership", "start": "2026-03-26", "end": "2026-03-26", "milestone": null, "status": "Upcoming", "notes": "", "health": "on-track"}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10J", "step_name": "CD R2", "phase": "Creative Development", "team": "Creative Leadership", "start": "2026-03-31", "end": "2026-03-31", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10K", "step_name": "EY R1", "phase": "Creative Development", "team": "EY / Leadership", "start": "2026-04-01", "end": "2026-04-01", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10L", "step_name": "Move to Testing w/ Jeff", "phase": "Creative Development", "team": "Creative / Testing", "start": "2026-04-02", "end": "2026-04-02", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10M", "step_name": "CD R3", "phase": "Creative Development", "team": "Creative Leadership", "start": "2026-04-07", "end": "2026-04-07", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10N", "step_name": "CD R4", "phase": "Final Creative Lock", "team": "Creative Leadership", "start": "2026-04-14", "end": "2026-04-14", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10O", "step_name": "EY R2 / Final", "phase": "Final Creative Lock", "team": "EY / Leadership", "start": "2026-04-15", "end": "2026-04-15", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10P", "step_name": "CD R5 (Pre-Pro Deep Dive)", "phase": "Pre-Production Lock", "team": "Creative Leadership", "start": "2026-04-21", "end": "2026-04-21", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10Q", "step_name": "CD R6 (Pre-Pro Final Lock)", "phase": "Pre-Production Lock", "team": "Creative Leadership", "start": "2026-04-28", "end": "2026-04-28", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "H-M1", "step_name": "Sample R1", "phase": "Milestone", "team": "Creative / Production", "start": null, "end": null, "milestone": "2026-05-12", "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "H-M2", "step_name": "Sample R2", "phase": "Milestone", "team": "Creative / Production", "start": null, "end": null, "milestone": "2026-06-02", "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "H-M3", "step_name": "Sample R3 / Final", "phase": "Milestone", "team": "Creative / Production", "start": null, "end": null, "milestone": "2026-06-23", "status": "Upcoming", "notes": "", "health": null}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "H-M4", "step_name": "Final Samples Approved", "phase": "Milestone", "team": "Creative / Production", "start": null, "end": null, "milestone": "2026-06-26", "status": "Upcoming", "notes": "", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "1", "step_name": "ExCo / EY / CD Align on Project", "phase": "Strategy", "team": "CMO / ExCo", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "2", "step_name": "Features Kick Off (CML)", "phase": "Strategy", "team": "CML", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "3", "step_name": "Ops to Develop Timeline / Project Tracker", "phase": "Strategy", "team": "Creative Ops", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "4", "step_name": "Features CMO Org ShareOut - Tracker Go Live", "phase": "Strategy", "team": "Creative Ops", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "5", "step_name": "Integrated Campaign Brief Development", "phase": "Integrated Campaign Brief", "team": "Strategy, GTM", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "6", "step_name": "CML Align of Brief", "phase": "Integrated Campaign Brief", "team": "CML", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "7", "step_name": "Integrated Campaign Brief Reviews", "phase": "Integrated Campaign Brief", "team": "Strategy, CML, GTM", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "8", "step_name": "Brief Channels", "phase": "Briefing", "team": "Strategy, GTM", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "9", "step_name": "Brief Creative", "phase": "Briefing", "team": "Strategy, GTM, Creative Ops", "start": null, "end": null, "milestone": "2026-05-11", "status": "Upcoming", "notes": "Known anchor: Brief Creative = May 11, 2026.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "10", "step_name": "Creative Concepting", "phase": "Creative", "team": "Creative, Visual", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "11", "step_name": "KO Production Planning", "phase": "Creative", "team": "Creative, Visual", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "12", "step_name": "CMO Concept Review", "phase": "Creative", "team": "Creative Leadership", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "13", "step_name": "President Concept Review & Talent Confirmation", "phase": "Creative", "team": "Creative Leadership", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "14", "step_name": "Concept Socialization + GTM KO", "phase": "Pre-Production", "team": "Creative", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "15", "step_name": "Pre-Pro Planning", "phase": "Pre-Production", "team": "Creative Ops", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "16", "step_name": "Window Development / Concept & Proto", "phase": "Pre-Production", "team": "Visual", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "17A", "step_name": "Lifestyle Shoot", "phase": "Production", "team": "Creative, Creative Ops", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "17B", "step_name": "Still Life Shoot", "phase": "Production", "team": "Creative, Creative Ops", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "17C", "step_name": "Mailer Shoot", "phase": "Production", "team": "Creative, Creative Ops", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "17D", "step_name": "Consideration Shoot", "phase": "Production", "team": "Creative, Creative Ops", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "17E", "step_name": "Conversion Shoot", "phase": "Production", "team": "Creative, Creative Ops", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "18A", "step_name": "On Figure Selects Approval", "phase": "Post Production", "team": "Strategy, CML, GTM, CMO", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "18B", "step_name": "Still Life Selects Approval", "phase": "Post Production", "team": "Strategy, CML, GTM, CMO", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "19C", "step_name": "Mailer Selects Approval", "phase": "Post Production", "team": "Strategy, CML, GTM, CMO", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "20", "step_name": "Post-Shoot Debrief", "phase": "Post Production", "team": "Creative", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "21A", "step_name": "On Figure Retouching", "phase": "Post Production", "team": "Creative", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "21B", "step_name": "Motion / Video Post", "phase": "Post Production", "team": "Creative", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "21C", "step_name": "Still Life Retouching", "phase": "Post Production", "team": "Creative", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "22", "step_name": "Upload Final Assets", "phase": "Post Production", "team": "Creative Ops", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "23", "step_name": "GTM Toolkit Development", "phase": "GTM", "team": "GTM", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "24", "step_name": "Toolkit Shareout", "phase": "GTM", "team": "GTM", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "25", "step_name": "Site Updates & Translations", "phase": "GTM", "team": "Channels", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "26", "step_name": "QA Assets & Tagging", "phase": "GTM", "team": "Channels", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "27", "step_name": "Green Light", "phase": "GTM", "team": "GTM", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "28", "step_name": "Mid-Campaign Check-In", "phase": "Live", "team": "Channels", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "29", "step_name": "Post-Campaign Reporting", "phase": "Wrap", "team": "Strategy, GTM", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "30", "step_name": "Post Mortem", "phase": "Wrap", "team": "Strategy, GTM", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "2027 Campaign", "workflow": "Campaign", "step_id": "31", "step_name": "Executive Shareout", "phase": "Wrap", "team": "Strategy, CML, GTM, CMO", "start": null, "end": null, "milestone": null, "status": "Needs Dates", "notes": "Template row captured; date still needs to be scheduled.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC1", "step_name": "Brand Immersion + Audit", "phase": "Phase 1 \u2014 Discover", "team": "Publicis / Core Team", "start": "2026-03-09", "end": "2026-03-13", "milestone": null, "status": "Completed", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC2", "step_name": "Stakeholder Interviews", "phase": "Phase 1 \u2014 Discover", "team": "Publicis / Leadership", "start": "2026-03-09", "end": "2026-03-20", "milestone": null, "status": "In Progress", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": "on-track"}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC3", "step_name": "Consumer / Cultural Research + Synthesis", "phase": "Phase 1 \u2014 Discover", "team": "Publicis / Research", "start": "2026-03-09", "end": "2026-03-20", "milestone": null, "status": "In Progress", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": "on-track"}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC4", "step_name": "Codes Audit + Category Analysis", "phase": "Phase 1 \u2014 Discover", "team": "Publicis / Strategy", "start": "2026-03-09", "end": "2026-03-20", "milestone": null, "status": "In Progress", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC5", "step_name": "Brand Positioning + Codes Working Session", "phase": "Phase 1 \u2014 Discover", "team": "Core Team", "start": "2026-03-20", "end": "2026-03-20", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC6", "step_name": "Positioning + Codes R1", "phase": "Phase 2 \u2014 Define", "team": "Publicis / Strategy", "start": "2026-03-23", "end": "2026-04-10", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": "on-track"}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC7", "step_name": "Positioning + Codes R2", "phase": "Phase 2 \u2014 Define", "team": "Publicis / Strategy", "start": "2026-04-13", "end": "2026-04-24", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC8", "step_name": "Positioning + Codes R3", "phase": "Phase 2 \u2014 Define", "team": "Publicis / Strategy", "start": "2026-04-27", "end": "2026-05-01", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC9", "step_name": "Positioning + Codes R4", "phase": "Phase 2 \u2014 Define", "team": "Publicis / Strategy", "start": "2026-05-04", "end": "2026-05-08", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC10", "step_name": "Final Positioning + Codes / 2027 Brief Work Session", "phase": "Phase 2 \u2014 Define", "team": "Publicis / Core Team", "start": "2026-05-11", "end": "2026-05-11", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC11", "step_name": "Identity + Visual System", "phase": "Phase 3 \u2014 Deliver", "team": "Publicis / Design", "start": "2026-05-11", "end": "2026-05-22", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC12", "step_name": "Verbal + Messaging System", "phase": "Phase 3 \u2014 Deliver", "team": "Publicis / Strategy", "start": "2026-05-11", "end": "2026-05-22", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC13", "step_name": "Content + Production Language", "phase": "Phase 3 \u2014 Deliver", "team": "Publicis / Creative", "start": "2026-05-25", "end": "2026-05-29", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC14", "step_name": "Brand Book Creation", "phase": "Phase 3 \u2014 Deliver", "team": "Publicis / Design", "start": "2026-06-01", "end": "2026-06-12", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC15", "step_name": "Stakeholder Presentation + Rollout", "phase": "Phase 3 \u2014 Deliver", "team": "Publicis / Leadership", "start": "2026-06-15", "end": "2026-06-15", "milestone": null, "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3.", "health": null}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA1", "step_name": "Project Timeline Overview", "phase": "Setup", "team": "PM", "start": "2026-02-24", "end": "2026-02-24", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA2", "step_name": "Preliminary Creative Sync", "phase": "Setup", "team": "PM", "start": "2026-02-24", "end": "2026-02-27", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA3", "step_name": "R1 Working Session (Creative Only)", "phase": "Working Session", "team": "Creative", "start": "2026-03-03", "end": "2026-03-03", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA4", "step_name": "R2 Working Session (Creative Only)", "phase": "Working Session", "team": "Creative", "start": "2026-03-05", "end": "2026-03-05", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA5", "step_name": "CD R1", "phase": "Review", "team": "Creative Director", "start": "2026-03-06", "end": "2026-03-06", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA6", "step_name": "PM R3", "phase": "Review", "team": "PM", "start": "2026-03-11", "end": "2026-03-11", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA7", "step_name": "CD R2", "phase": "Review", "team": "Creative Director", "start": "2026-03-12", "end": "2026-03-12", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA8", "step_name": "PM R4", "phase": "Review", "team": "PM", "start": "2026-03-17", "end": "2026-03-17", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA9", "step_name": "CD R3", "phase": "Review", "team": "Creative Director", "start": "2026-03-18", "end": "2026-03-18", "milestone": null, "status": "In Progress", "notes": "", "health": "ahead"}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA10", "step_name": "PM R5", "phase": "Review", "team": "PM", "start": "2026-03-25", "end": "2026-03-25", "milestone": null, "status": "Upcoming", "notes": "", "health": "ahead"}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA11", "step_name": "CD R4", "phase": "Review", "team": "Creative Director", "start": "2026-03-27", "end": "2026-03-27", "milestone": null, "status": "Upcoming", "notes": "", "health": "on-track"}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA12", "step_name": "Finalize + Shareout", "phase": "Finalization", "team": "PM / Creative", "start": "2026-03-31", "end": "2026-03-31", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA13", "step_name": "CD R5 / Finalize", "phase": "Finalization", "team": "Creative Director", "start": "2026-03-31", "end": "2026-03-31", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Digital Evolution", "workflow": "Digital Rollout", "step_id": "DE1", "step_name": "Shoot / Content Capture", "phase": "Production", "team": "Creative / Production", "start": "2026-03-23", "end": "2026-03-27", "milestone": null, "status": "Upcoming", "notes": "Timeline aligned to Elevated Heros digital rollout.", "health": "on-track"}, {"project": "Digital Evolution", "workflow": "Digital Rollout", "step_id": "DE2", "step_name": "eComm Layout Reviews", "phase": "Layout Reviews", "team": "eComm / Creative", "start": "2026-04-02", "end": "2026-04-21", "milestone": null, "status": "Upcoming", "notes": "Includes eComm, Kim/PM, and CD review rounds.", "health": "on-track"}, {"project": "Digital Evolution", "workflow": "Digital Rollout", "step_id": "DE3", "step_name": "Handoff", "phase": "Handoff", "team": "Creative / Dev", "start": "2026-04-24", "end": "2026-04-24", "milestone": null, "status": "Upcoming", "notes": "Handoff locked for Apr 24.", "health": null}, {"project": "Digital Evolution", "workflow": "Digital Rollout", "step_id": "DE4", "step_name": "Site / Experience Build", "phase": "Build", "team": "Dev / Channels", "start": "2026-04-27", "end": "2026-05-22", "milestone": null, "status": "Upcoming", "notes": "Build window through Trevor Project updates integration.", "health": null}, {"project": "Digital Evolution", "workflow": "Digital Rollout", "step_id": "DE5", "step_name": "Trevor Project Updates Integration", "phase": "Build", "team": "Dev / Channels", "start": "2026-05-25", "end": "2026-05-29", "milestone": null, "status": "Upcoming", "notes": "Trevor Project updates incorporated before launch.", "health": null}, {"project": "Digital Evolution", "workflow": "Digital Rollout", "step_id": "DE6", "step_name": "Final QA + Integration", "phase": "QA", "team": "QA / Channels", "start": "2026-05-28", "end": "2026-05-29", "milestone": null, "status": "Upcoming", "notes": "Final integration and QA pass.", "health": null}, {"project": "Digital Evolution", "workflow": "Digital Rollout", "step_id": "DE7", "step_name": "Launch", "phase": "Launch", "team": "All Teams", "start": "2026-06-01", "end": "2026-06-01", "milestone": "2026-06-01", "status": "Upcoming", "notes": "Launch on Jun 1 with Trevor Project updates.", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH1", "step_name": "Shoot", "phase": "Production", "team": "Creative / Production", "start": "2026-03-23", "end": "2026-03-27", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH2", "step_name": "eComm Layout Review", "phase": "Layout Reviews", "team": "eComm / Creative", "start": "2026-04-02", "end": "2026-04-02", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH3", "step_name": "eComm Layout Review with Kim / PM R1", "phase": "Layout Reviews", "team": "Kim / PM", "start": "2026-04-07", "end": "2026-04-07", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH4", "step_name": "eComm Layout Review with Kim / PM R2", "phase": "Layout Reviews", "team": "Kim / PM", "start": "2026-04-09", "end": "2026-04-09", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH5", "step_name": "CD Layout Review R1", "phase": "Layout Reviews", "team": "Creative Director", "start": "2026-04-14", "end": "2026-04-14", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH6", "step_name": "CD Layout Review R2 / Final", "phase": "Layout Reviews", "team": "Creative Director", "start": "2026-04-21", "end": "2026-04-21", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH7", "step_name": "Final Asset Prep + QA", "phase": "Handoff", "team": "Creative / QA", "start": "2026-04-22", "end": "2026-04-23", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH8", "step_name": "Handoff", "phase": "Handoff", "team": "Creative / Dev", "start": "2026-04-24", "end": "2026-04-24", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH9", "step_name": "Site / Experience Build", "phase": "Build", "team": "Dev / Channels", "start": "2026-04-27", "end": "2026-05-22", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH10", "step_name": "Trevor Project Updates Integration", "phase": "Build", "team": "Dev / Channels", "start": "2026-05-25", "end": "2026-05-29", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH11", "step_name": "Final QA + Integration", "phase": "QA", "team": "QA / Channels", "start": "2026-05-28", "end": "2026-05-29", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH12", "step_name": "Launch", "phase": "Launch", "team": "All Teams", "start": "2026-06-01", "end": "2026-06-01", "milestone": null, "status": "Upcoming", "notes": "w/ Trevor Project Updates", "health": null}, {"project": "Expressives", "workflow": "Event", "step_id": "EV1", "step_name": "Event Kickoff", "phase": "Planning", "team": "Strategy / Creative", "start": "2026-03-16", "end": "2026-03-16", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Expressives", "workflow": "Event", "step_id": "EV2", "step_name": "Creative Development", "phase": "Planning", "team": "Creative", "start": "2026-03-17", "end": "2026-03-27", "milestone": null, "status": "In Progress", "notes": "", "health": "ahead"}, {"project": "Expressives", "workflow": "Event", "step_id": "EV3", "step_name": "Production Planning", "phase": "Production", "team": "Creative Ops", "start": "2026-03-23", "end": "2026-04-03", "milestone": null, "status": "Upcoming", "notes": "", "health": "ahead"}, {"project": "Expressives", "workflow": "Event", "step_id": "EV4", "step_name": "Final Prep + QA", "phase": "Production", "team": "Creative / Ops", "start": "2026-04-06", "end": "2026-04-10", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Expressives", "workflow": "Event", "step_id": "EV5", "step_name": "Event Live", "phase": "Live", "team": "All Teams", "start": "2026-04-16", "end": "2026-04-16", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Expressives", "workflow": "Event", "step_id": "EV6", "step_name": "Wrap + Reporting", "phase": "Wrap", "team": "Strategy", "start": "2026-04-17", "end": "2026-04-24", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A1", "step_name": "SOW Finalized", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "Partnership / Legal", "start": "2025-08-29", "end": "2025-08-29", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A2", "step_name": "Contract Signed (Whitney)", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "Partnership / Legal", "start": "2025-08-19", "end": "2025-11-03", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A3", "step_name": "Contract Signed (Lichtenstein Estate)", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "Partnership / Legal", "start": "2025-08-29", "end": "2025-10-03", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A4", "step_name": "Payment #1 Due to Estate", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "Finance / Legal", "start": "2025-08-29", "end": "2025-11-03", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A5", "step_name": "DY Internal Brief KO", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "Internal Team", "start": "2025-10-28", "end": "2025-10-28", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A6", "step_name": "Image Selection + Copyright / Credits Confirm", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "GTM / Creative / Legal", "start": "2026-02-02", "end": "2026-02-02", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A7", "step_name": "Catalog of Pieces Received", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "Partnership / Creative", "start": "2026-02-27", "end": "2026-02-27", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A8", "step_name": "Photo Portrait + Copyright Approval", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "Partnership / Legal", "start": "2026-03-02", "end": "2026-03-02", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A9", "step_name": "Payment #2 Due to Estate", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "Finance / Legal", "start": "2026-03-02", "end": "2026-03-31", "milestone": null, "status": "In Progress", "notes": "", "health": "at-risk"}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A10", "step_name": "Donation to Whitney Due", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "Finance", "start": "2026-09-02", "end": "2026-09-02", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A11", "step_name": "Press Plan", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "PR / Comms", "start": "2026-09-02", "end": "2026-09-02", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A12", "step_name": "Installation Date (57th St, Miami, Dallas)", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "VM / Ops", "start": "2026-09-30", "end": "2026-09-30", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A13", "step_name": "Exhibit Launch + Opening Events", "phase": "Track A \u2014 Partnership / GTM / Legal", "team": "PR / Events", "start": "2026-10-14", "end": "2026-10-14", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B1", "step_name": "Concepting + Creative Development (Shopping Bags)", "phase": "Track B \u2014 Shopping Bags", "team": "Creative / Design", "start": "2026-01-22", "end": "2026-02-11", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B2", "step_name": "CMO R1", "phase": "Track B \u2014 Shopping Bags", "team": "CMO", "start": "2026-02-19", "end": "2026-02-19", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B3", "step_name": "CMO R2", "phase": "Track B \u2014 Shopping Bags", "team": "CMO", "start": "2026-03-03", "end": "2026-03-06", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B4", "step_name": "EY R1", "phase": "Track B \u2014 Shopping Bags", "team": "EY", "start": "2026-03-10", "end": "2026-03-10", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B5", "step_name": "CMO R3 / Final", "phase": "Track B \u2014 Shopping Bags", "team": "CMO", "start": "2026-03-17", "end": "2026-03-17", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B6", "step_name": "EY R2 / Final", "phase": "Track B \u2014 Shopping Bags", "team": "EY", "start": "2026-03-18", "end": "2026-03-18", "milestone": null, "status": "In Progress", "notes": "", "health": "slipping"}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B7", "step_name": "Design Finalized / Hand off to Vendor", "phase": "Track B \u2014 Shopping Bags", "team": "Creative / Vendor", "start": "2026-03-23", "end": "2026-03-23", "milestone": null, "status": "Upcoming", "notes": "", "health": "at-risk"}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B8", "step_name": "R1 Sample with Design Review", "phase": "Track B \u2014 Shopping Bags", "team": "Creative / Vendor", "start": "2026-04-14", "end": "2026-04-17", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B9", "step_name": "R2 Sample with Design Approval", "phase": "Track B \u2014 Shopping Bags", "team": "Creative / Vendor", "start": "2026-05-12", "end": "2026-05-15", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B10", "step_name": "R3 Sample with Design Review", "phase": "Track B \u2014 Shopping Bags", "team": "Creative / Vendor", "start": "2026-06-09", "end": "2026-06-11", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B11", "step_name": "Design Lock for Production + PO", "phase": "Track B \u2014 Shopping Bags", "team": "Creative / Procurement", "start": "2026-06-12", "end": "2026-06-12", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B12", "step_name": "Production Begins", "phase": "Track B \u2014 Shopping Bags", "team": "Production", "start": "2026-06-15", "end": "2026-06-15", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B13", "step_name": "PPS Ready + Approval", "phase": "Track B \u2014 Shopping Bags", "team": "Production / QA", "start": "2026-07-14", "end": "2026-07-17", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B14", "step_name": "Mass Production", "phase": "Track B \u2014 Shopping Bags", "team": "Production", "start": "2026-07-08", "end": "2026-08-27", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B15", "step_name": "FOB Deliver to Forwarder", "phase": "Track B \u2014 Shopping Bags", "team": "Operations", "start": "2026-08-28", "end": "2026-08-28", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B16", "step_name": "Estimated Air Freight to NJ Warehouse", "phase": "Track B \u2014 Shopping Bags", "team": "Operations", "start": "2026-09-14", "end": "2026-09-14", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B17", "step_name": "Shopping Bags In Store", "phase": "Track B \u2014 Shopping Bags", "team": "Retail", "start": "2026-10-02", "end": "2026-10-02", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-C1", "step_name": "Creative Expression Execution Planning (Windows)", "phase": "Track C \u2014 Windows", "team": "Creative / VM", "start": "2026-01-05", "end": "2026-02-02", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-C2", "step_name": "Concepting + Creative Development (Windows)", "phase": "Track C \u2014 Windows", "team": "Creative / VM", "start": "2026-02-02", "end": "2026-02-14", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-C3", "step_name": "Concepts | CMO R1", "phase": "Track C \u2014 Windows", "team": "CMO", "start": "2026-02-19", "end": "2026-02-19", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-C4", "step_name": "Concepts | CMO R2", "phase": "Track C \u2014 Windows", "team": "CMO", "start": "2026-03-03", "end": "2026-03-03", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-C5", "step_name": "Design Finalized / Hand off to Vendor", "phase": "Track C \u2014 Windows", "team": "Creative / Vendor", "start": "2026-03-23", "end": "2026-03-23", "milestone": null, "status": "Upcoming", "notes": "", "health": "on-track"}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-C6", "step_name": "Production + Build (Window Installations)", "phase": "Track C \u2014 Windows", "team": "VM / Production", "start": "2026-07-01", "end": "2026-09-30", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-D1", "step_name": "Pre-Production Planning / Content Gathering", "phase": "Track D \u2014 Making Of", "team": "Content / Production", "start": "2026-01-26", "end": "2026-07-01", "milestone": null, "status": "In Progress", "notes": "", "health": "slipping"}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-D2", "step_name": "Production KO + Planning", "phase": "Track D \u2014 Making Of", "team": "Content / Production", "start": "2026-07-01", "end": "2026-07-31", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-D3", "step_name": "Shoot Installations", "phase": "Track D \u2014 Making Of", "team": "Content / Production", "start": "2026-09-03", "end": "2026-09-04", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-D4", "step_name": "Video Editing Block", "phase": "Track D \u2014 Making Of", "team": "Content / Editing", "start": "2026-09-07", "end": "2026-09-16", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-D5", "step_name": "Creative Reviews / Approvals", "phase": "Track D \u2014 Making Of", "team": "Creative Leadership", "start": "2026-09-17", "end": "2026-09-26", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-E1", "step_name": "LICHTENSTEIN VIC Event", "phase": "Track E \u2014 Events / PR / Social", "team": "Events / PR", "start": "2026-10-21", "end": "2026-10-21", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "NBA", "workflow": "Event", "step_id": "EV1", "step_name": "Event Kickoff", "phase": "Planning", "team": "Strategy / Creative", "start": "2026-03-16", "end": "2026-03-16", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "NBA", "workflow": "Event", "step_id": "EV2", "step_name": "Creative Development", "phase": "Planning", "team": "Creative", "start": "2026-03-17", "end": "2026-03-27", "milestone": null, "status": "In Progress", "notes": "", "health": "on-track"}, {"project": "NBA", "workflow": "Event", "step_id": "EV3", "step_name": "Production Planning", "phase": "Production", "team": "Creative Ops", "start": "2026-03-23", "end": "2026-04-03", "milestone": null, "status": "Upcoming", "notes": "", "health": "on-track"}, {"project": "NBA", "workflow": "Event", "step_id": "EV4", "step_name": "Final Prep + QA", "phase": "Production", "team": "Creative / Ops", "start": "2026-04-06", "end": "2026-04-10", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "NBA", "workflow": "Event", "step_id": "EV5", "step_name": "Event Live", "phase": "Live", "team": "All Teams", "start": "2026-04-16", "end": "2026-04-16", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "NBA", "workflow": "Event", "step_id": "EV6", "step_name": "Wrap + Reporting", "phase": "Wrap", "team": "Strategy", "start": "2026-04-17", "end": "2026-04-24", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO1", "step_name": "Kickoff & Pre-Production", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-04-01", "end": "2026-04-12", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO2", "step_name": "Scripting & Keyframe Development", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-04-13", "end": "2026-05-03", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO3", "step_name": "Client Check-In #1", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-05-06", "end": "2026-05-06", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO4", "step_name": "Feedback Integration", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-05-07", "end": "2026-05-17", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO5", "step_name": "AI Workflow Setup & Initial Scenes", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-05-18", "end": "2026-06-06", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO6", "step_name": "Production (Phase 1)", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-06-08", "end": "2026-07-19", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO7", "step_name": "Client Check-In #2", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-07-26", "end": "2026-07-26", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO8", "step_name": "Production (Phase 2) / Refinement", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-07-27", "end": "2026-08-30", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO9", "step_name": "Client Check-In #3 + Feedback Due", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-09-04", "end": "2026-09-04", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO10", "step_name": "Final Polish & Delivery Prep", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-09-05", "end": "2026-09-20", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Internal Team", "workflow": "SEO / Content Production", "step_id": "SEO11", "step_name": "Final Delivery", "phase": "SEO Workflow", "team": "SEO / Internal Team", "start": "2026-09-21", "end": "2026-09-21", "milestone": null, "status": "Upcoming", "notes": "Mirrored cadence from Silverside Heritage pending final delivery confirmation.", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO1", "step_name": "Kickoff & Pre-Production", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-04-06", "end": "2026-04-17", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO2", "step_name": "Scripting & Keyframe Development", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-04-20", "end": "2026-05-08", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO3", "step_name": "Client Check-In #1", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-05-11", "end": "2026-05-11", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO4", "step_name": "Feedback Integration", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-05-12", "end": "2026-05-22", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO5", "step_name": "AI Workflow Setup & Initial Scenes", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-05-25", "end": "2026-06-12", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO6", "step_name": "Production (Phase 1)", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-06-15", "end": "2026-07-24", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO7", "step_name": "Client Check-In #2", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-07-31", "end": "2026-07-31", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO8", "step_name": "Production (Phase 2) / Refinement", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-08-03", "end": "2026-09-04", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO9", "step_name": "Client Check-In #3 + Feedback Due", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-09-09", "end": "2026-09-09", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO10", "step_name": "Final Polish & Delivery Prep", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-09-10", "end": "2026-09-25", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "SEO w/ Silverside Heritage", "workflow": "SEO / Content Production", "step_id": "SEO11", "step_name": "Final Delivery", "phase": "SEO Workflow", "team": "SEO / Creative / Client", "start": "2026-09-26", "end": "2026-09-26", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Social Strategy", "workflow": "Strategy", "step_id": "SS1", "step_name": "Social Strategy Kickoff", "phase": "Phase 1 \u2014 Kickoff", "team": "Strategy / Social", "start": "2026-05-12", "end": "2026-05-12", "milestone": null, "status": "Upcoming", "notes": "Starts after end of Brand Codes Phase 2, per user direction.", "health": null}, {"project": "Social Strategy", "workflow": "Strategy", "step_id": "SS2", "step_name": "Platform + Channel Strategy", "phase": "Phase 1 \u2014 Development", "team": "Strategy / Social", "start": "2026-05-12", "end": "2026-05-15", "milestone": null, "status": "Upcoming", "notes": "Starts after end of Brand Codes Phase 2, per user direction.", "health": null}, {"project": "Social Strategy", "workflow": "Strategy", "step_id": "SS3", "step_name": "Content Pillars + Narrative", "phase": "Phase 1 \u2014 Development", "team": "Strategy / Social", "start": "2026-05-18", "end": "2026-05-22", "milestone": null, "status": "Upcoming", "notes": "Starts after end of Brand Codes Phase 2, per user direction.", "health": null}, {"project": "Social Strategy", "workflow": "Strategy", "step_id": "SS4", "step_name": "Campaign + Always-On Framework", "phase": "Phase 1 \u2014 Development", "team": "Strategy / Social", "start": "2026-05-26", "end": "2026-05-29", "milestone": null, "status": "Upcoming", "notes": "Starts after end of Brand Codes Phase 2, per user direction.", "health": null}, {"project": "Social Strategy", "workflow": "Strategy", "step_id": "SS5", "step_name": "Content Calendar + System", "phase": "Phase 2 \u2014 Planning", "team": "Strategy / Social", "start": "2026-06-01", "end": "2026-06-05", "milestone": null, "status": "Upcoming", "notes": "Starts after end of Brand Codes Phase 2, per user direction.", "health": null}, {"project": "Social Strategy", "workflow": "Strategy", "step_id": "SS6", "step_name": "KPI + Measurement Framework", "phase": "Phase 2 \u2014 Planning", "team": "Strategy / Analytics", "start": "2026-06-08", "end": "2026-06-10", "milestone": null, "status": "Upcoming", "notes": "Starts after end of Brand Codes Phase 2, per user direction.", "health": null}, {"project": "Social Strategy", "workflow": "Strategy", "step_id": "SS7", "step_name": "Final Strategy Deck + Alignment", "phase": "Phase 2 \u2014 Final", "team": "Strategy / Social", "start": "2026-06-12", "end": "2026-06-12", "milestone": null, "status": "Upcoming", "notes": "Starts after end of Brand Codes Phase 2, per user direction.", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA1", "step_name": "Brief Strategy Alignment", "phase": "Phase 1 \u2014 Strategy", "team": "CD / TH", "start": "2025-10-31", "end": "2025-10-31", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA2", "step_name": "Filming Wrap", "phase": "Phase 1 \u2014 Production", "team": "Creative Ops", "start": "2025-11-10", "end": "2025-11-10", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA3", "step_name": "Placement Review", "phase": "Phase 1 \u2014 Placement", "team": "TH", "start": "2026-01-15", "end": "2026-01-15", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA4", "step_name": "BTS Kickoff + Questions", "phase": "Phase 2 \u2014 BTS", "team": "Strategy / Comms / Creative", "start": "2026-03-23", "end": "2026-03-27", "milestone": null, "status": "Upcoming", "notes": "", "health": "slipping"}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA5", "step_name": "Carolyn Review 1", "phase": "Phase 2 \u2014 BTS", "team": "Carolyn / Creative", "start": "2026-03-30", "end": "2026-03-30", "milestone": null, "status": "Upcoming", "notes": "", "health": "slipping"}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA6", "step_name": "Carolyn Review 2", "phase": "Phase 2 \u2014 BTS", "team": "Carolyn / Creative", "start": "2026-04-06", "end": "2026-04-06", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA7", "step_name": "Carolyn Review 3", "phase": "Phase 2 \u2014 BTS", "team": "Carolyn / Creative", "start": "2026-04-13", "end": "2026-04-13", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA8", "step_name": "Talent Approval of Questions", "phase": "Phase 2 \u2014 BTS", "team": "Talent / Creative", "start": "2026-04-20", "end": "2026-04-20", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA9", "step_name": "BTS Filming", "phase": "Phase 3 \u2014 BTS Production", "team": "Creative / Production", "start": "2026-05-01", "end": "2026-05-31", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA10", "step_name": "Amplification Brief Development", "phase": "Phase 4 \u2014 Amplification", "team": "Strategy / Comms / Creative", "start": "2026-04-01", "end": "2026-06-30", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA11", "step_name": "Film Marketing Cycle", "phase": "Phase 5 \u2014 GTM", "team": "DY / Amazon MGM", "start": "2026-10-01", "end": "2026-12-31", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA12", "step_name": "Global Release", "phase": "Phase 6 \u2014 Launch", "team": "Marketing / Comms", "start": "2027-03-27", "end": "2027-03-27", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA13", "step_name": "Marketing Window (2 weeks pre)", "phase": "Phase 6 \u2014 Launch", "team": "Marketing / Comms", "start": "2027-03-13", "end": "2027-03-26", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA14", "step_name": "Marketing Window (2 weeks post)", "phase": "Phase 6 \u2014 Launch", "team": "Marketing / Comms", "start": "2027-03-27", "end": "2027-04-10", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W1", "step_name": "Present Q2 Window Creative Concept", "phase": "Concept", "team": "Creative", "start": "2026-01-05", "end": "2026-01-16", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W2", "step_name": "Concept Development", "phase": "Concept", "team": "Creative", "start": "2026-01-12", "end": "2026-01-19", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W3", "step_name": "Product Merchandise Pull", "phase": "Concept", "team": "Merch", "start": "2026-01-19", "end": "2026-01-23", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W4", "step_name": "Design Review CD", "phase": "Design", "team": "Creative Director", "start": "2026-01-20", "end": "2026-01-20", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W5", "step_name": "VM Team Design Development Review", "phase": "Design", "team": "VM Team", "start": "2026-01-21", "end": "2026-03-13", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W6", "step_name": "Design Development + Technical Drawings", "phase": "Design", "team": "Design / Technical", "start": "2026-01-21", "end": "2026-02-27", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W7", "step_name": "Prototype Round 1 (Build + Review)", "phase": "Prototype R1", "team": "Design / Fabrication", "start": "2026-01-21", "end": "2026-03-13", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W8", "step_name": "VM Team Prototype Set Up / Review", "phase": "Prototype R1", "team": "VM Team", "start": "2026-01-21", "end": "2026-03-13", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W9", "step_name": "Round 1 Prototype Approvals CD", "phase": "Prototype R1", "team": "Creative Director", "start": "2026-03-17", "end": "2026-03-17", "milestone": null, "status": "Completed", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W10", "step_name": "Round 1 Prototype Review EY", "phase": "Prototype R1", "team": "EY", "start": "2026-03-18", "end": "2026-03-18", "milestone": null, "status": "In Progress", "notes": "", "health": "at-risk"}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W11", "step_name": "Prototype Round 2 (Refreshment + Adjustment)", "phase": "Prototype R2", "team": "Design / Fabrication", "start": "2026-03-17", "end": "2026-03-20", "milestone": null, "status": "In Progress", "notes": "", "health": "at-risk"}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W12", "step_name": "Round 2 Approvals CD", "phase": "Prototype R2", "team": "Creative Director", "start": "2026-03-24", "end": "2026-03-24", "milestone": null, "status": "Upcoming", "notes": "", "health": "slipping"}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W13", "step_name": "Round 2 Final Signoff EY", "phase": "Prototype R2", "team": "EY", "start": "2026-03-25", "end": "2026-03-25", "milestone": null, "status": "Upcoming", "notes": "", "health": "at-risk"}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W14", "step_name": "R1 Distro Order \u2013 RFP", "phase": "Production", "team": "Operations", "start": "2026-03-23", "end": "2026-03-30", "milestone": null, "status": "Upcoming", "notes": "", "health": "slipping"}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W15", "step_name": "Production / Fabrication", "phase": "Production", "team": "Fabrication", "start": "2026-03-31", "end": "2026-05-01", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W16", "step_name": "Pack + Ship", "phase": "Production", "team": "Operations", "start": "2026-05-04", "end": "2026-05-11", "milestone": null, "status": "Upcoming", "notes": "", "health": null}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W17", "step_name": "Installation", "phase": "Installation", "team": "VM / Ops", "start": "2026-05-11", "end": "2026-05-15", "milestone": null, "status": "Upcoming", "notes": "", "health": null}];
+const THIS_WEEK = [{"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-D1", "step_name": "Pre-Production Planning / Content Gathering", "phase": "Track D \u2014 Making Of", "date_range": "Jan 26, 2026 - Jul 01, 2026", "status": "In Progress", "notes": ""}, {"project": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "step_id": "CO4", "step_name": "Executive Storyline + Readout Draft", "phase": "Readout Prep", "date_range": "Feb 23, 2026 - Mar 20, 2026", "status": "In Progress", "notes": "Build readout and recommendation narrative."}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-A9", "step_name": "Payment #2 Due to Estate", "phase": "Track A \u2014 Partnership / GTM / Legal", "date_range": "Mar 02, 2026 - Mar 31, 2026", "status": "In Progress", "notes": ""}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC2", "step_name": "Stakeholder Interviews", "phase": "Phase 1 \u2014 Discover", "date_range": "Mar 09, 2026 - Mar 20, 2026", "status": "In Progress", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3."}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC3", "step_name": "Consumer / Cultural Research + Synthesis", "phase": "Phase 1 \u2014 Discover", "date_range": "Mar 09, 2026 - Mar 20, 2026", "status": "In Progress", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3."}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC4", "step_name": "Codes Audit + Category Analysis", "phase": "Phase 1 \u2014 Discover", "date_range": "Mar 09, 2026 - Mar 20, 2026", "status": "In Progress", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3."}, {"project": "Expressives", "workflow": "Event", "step_id": "EV2", "step_name": "Creative Development", "phase": "Planning", "date_range": "Mar 17, 2026 - Mar 27, 2026", "status": "In Progress", "notes": ""}, {"project": "NBA", "workflow": "Event", "step_id": "EV2", "step_name": "Creative Development", "phase": "Planning", "date_range": "Mar 17, 2026 - Mar 27, 2026", "status": "In Progress", "notes": ""}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W11", "step_name": "Prototype Round 2 (Refreshment + Adjustment)", "phase": "Prototype R2", "date_range": "Mar 17, 2026 - Mar 20, 2026", "status": "In Progress", "notes": ""}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA9", "step_name": "CD R3", "phase": "Review", "date_range": "Mar 18, 2026", "status": "In Progress", "notes": ""}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B6", "step_name": "EY R2 / Final", "phase": "Track B \u2014 Shopping Bags", "date_range": "Mar 18, 2026", "status": "In Progress", "notes": ""}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W10", "step_name": "Round 1 Prototype Review EY", "phase": "Prototype R1", "date_range": "Mar 18, 2026", "status": "In Progress", "notes": ""}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10E", "step_name": "Channels Submit / Align on Asset Requests", "phase": "Creative Concepting", "date_range": "Mar 19, 2026", "status": "Upcoming", "notes": ""}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10F", "step_name": "Brand Marketing Re-Brief", "phase": "Creative Concepting", "date_range": "Mar 20, 2026", "status": "Upcoming", "notes": ""}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC5", "step_name": "Brand Positioning + Codes Working Session", "phase": "Phase 1 \u2014 Discover", "date_range": "Mar 20, 2026", "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3."}, {"project": "2026 Campaign Close-Out", "workflow": "Campaign Wrap", "step_id": "CO5", "step_name": "Cross-Functional Review + Revisions", "phase": "Readout Prep", "date_range": "Mar 23, 2026 - Apr 10, 2026", "status": "Upcoming", "notes": "Incorporate feedback from leadership and partners."}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10G", "step_name": "Pre-CD Alignment", "phase": "Creative Concepting", "date_range": "Mar 23, 2026", "status": "Upcoming", "notes": ""}, {"project": "Brand Codes", "workflow": "Strategy", "step_id": "BC6", "step_name": "Positioning + Codes R1", "phase": "Phase 2 \u2014 Define", "date_range": "Mar 23, 2026 - Apr 10, 2026", "status": "Upcoming", "notes": "Revised pacing: compressed Phase 1, longer Phase 2, compressed Phase 3."}, {"project": "Digital Evolution", "workflow": "Digital Rollout", "step_id": "DE1", "step_name": "Shoot / Content Capture", "phase": "Production", "date_range": "Mar 23, 2026 - Mar 27, 2026", "status": "Upcoming", "notes": "Timeline aligned to Elevated Heros digital rollout."}, {"project": "Elevated Heros Site", "workflow": "Digital Rollout", "step_id": "EH1", "step_name": "Shoot", "phase": "Production", "date_range": "Mar 23, 2026 - Mar 27, 2026", "status": "Upcoming", "notes": ""}, {"project": "Expressives", "workflow": "Event", "step_id": "EV3", "step_name": "Production Planning", "phase": "Production", "date_range": "Mar 23, 2026 - Apr 03, 2026", "status": "Upcoming", "notes": ""}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-B7", "step_name": "Design Finalized / Hand off to Vendor", "phase": "Track B \u2014 Shopping Bags", "date_range": "Mar 23, 2026", "status": "Upcoming", "notes": ""}, {"project": "Lichtenstein", "workflow": "Art Partnership", "step_id": "LT-C5", "step_name": "Design Finalized / Hand off to Vendor", "phase": "Track C \u2014 Windows", "date_range": "Mar 23, 2026", "status": "Upcoming", "notes": ""}, {"project": "NBA", "workflow": "Event", "step_id": "EV3", "step_name": "Production Planning", "phase": "Production", "date_range": "Mar 23, 2026 - Apr 03, 2026", "status": "Upcoming", "notes": ""}, {"project": "TCA Integration", "workflow": "Partnership / Film", "step_id": "TCA4", "step_name": "BTS Kickoff + Questions", "phase": "Phase 2 \u2014 BTS", "date_range": "Mar 23, 2026 - Mar 27, 2026", "status": "Upcoming", "notes": ""}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W14", "step_name": "R1 Distro Order \u2013 RFP", "phase": "Production", "date_range": "Mar 23, 2026 - Mar 30, 2026", "status": "Upcoming", "notes": ""}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W12", "step_name": "Round 2 Approvals CD", "phase": "Prototype R2", "date_range": "Mar 24, 2026", "status": "Upcoming", "notes": ""}, {"project": "2026 Holiday", "workflow": "Holiday Expanded", "step_id": "10H", "step_name": "CD R1", "phase": "Creative Concepting", "date_range": "Mar 25, 2026", "status": "Upcoming", "notes": ""}, {"project": "Copy Architecture", "workflow": "Review Sprint", "step_id": "CA10", "step_name": "PM R5", "phase": "Review", "date_range": "Mar 25, 2026", "status": "Upcoming", "notes": ""}, {"project": "Windows Q2", "workflow": "VM / Retail", "step_id": "W13", "step_name": "Round 2 Final Signoff EY", "phase": "Prototype R2", "date_range": "Mar 25, 2026", "status": "Upcoming", "notes": ""}];
+
+const HEALTH_CONFIG = {
+  'at-risk':  { label:'At Risk',  color:'var(--at-risk)',  bg:'var(--at-risk-bg)',  icon:'🔴', desc:'Immediate attention needed' },
+  'slipping': { label:'Slipping', color:'var(--slipping)', bg:'var(--slipping-bg)', icon:'🟠', desc:'Behind pace, needs monitoring' },
+  'on-track': { label:'On Track', color:'var(--on-track)', bg:'var(--on-track-bg)', icon:'🟢', desc:'Running to schedule' },
+  'ahead':    { label:'Ahead',    color:'var(--ahead)',    bg:'var(--ahead-bg)',    icon:'🔵', desc:'Running ahead of schedule' },
+};
+
+const WORKFLOW_COLORS = {
+  'Campaign':'#4a9eff','Campaign Wrap':'#22d3ee','Holiday Expanded':'#f472b6',
+  'Strategy':'#a78bfa','Review Sprint':'#34d399','Art Partnership':'#facc15',
+  'VM / Retail':'#fb923c','Digital Rollout':'#38bdf8','Event':'#f87171',
+  'Partnership / Film':'#c084fc','SEO / Content Production':'#a3e635',
+};
+function wfColor(wf){ return WORKFLOW_COLORS[wf]||'#6e6e82'; }
+
+function fmtDate(d){
+  if(!d) return null;
+  return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function fmtDateFull(d){
+  if(!d) return '—';
+  return new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+function statusClass(s){
+  if(!s) return '';
+  const l=s.toLowerCase();
+  if(l.includes('progress')) return 'in-progress';
+  if(l.includes('upcoming')) return 'upcoming';
+  if(l.includes('complet')) return 'completed';
+  if(l.includes('needs')) return 'needs';
+  return '';
+}
+
+// ── TODAY ──────────────────────────────────────────────────────
+document.getElementById('today-display').textContent =
+  TODAY.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+
+// ── HEALTH MINI NAV BAR ────────────────────────────────────────
+function buildHealthMini(){
+  const counts = {'at-risk':0,'slipping':0,'on-track':0,'ahead':0};
+  PROJECTS.forEach(p => { if(counts[p.health]!==undefined) counts[p.health]++; });
+  const el = document.getElementById('health-mini');
+  el.innerHTML = Object.entries(HEALTH_CONFIG).map(([k,v]) =>
+    `<span class="hm-pill hbadge ${k}" onclick="showView('status')" title="${v.desc}">${counts[k]} ${v.label}</span>`
+  ).join('');
+}
+
+// ── PORTFOLIO ─────────────────────────────────────────────────
+let portfolioFilter = 'all';
+function buildPortfolio(){
+  const grid = document.getElementById('project-grid');
+  grid.innerHTML = '';
+  const filtered = portfolioFilter==='all' ? PROJECTS
+    : PROJECTS.filter(p => p.health===portfolioFilter);
+  document.getElementById('portfolio-subtitle').textContent =
+    `${filtered.length} of ${PROJECTS.length} projects · ${PROJECTS.filter(p=>p.status==='In Progress').length} active`;
+
+  filtered.forEach(p => {
+    const hc = HEALTH_CONFIG[p.health]||HEALTH_CONFIG['on-track'];
+    const total = p.total||1;
+    const pct = Math.round((p.completed/total)*100);
+    const color = wfColor(p.workflow);
+    const next3 = p.next3 ? p.next3.split(' | ').slice(0,3) : [];
+    const card = document.createElement('div');
+    card.className = `project-card ${p.health}`;
+    card.innerHTML = `
+      <div class="pc-top">
+        <div class="pc-name">${p.name}</div>
+      </div>
+      <div class="pc-workflow">${p.workflow}</div>
+      <div class="pc-health-row">
+        <span class="hbadge ${p.health}">${hc.label}</span>
+        <span class="pc-status-small">${p.status}</span>
+      </div>
+      ${p.needs_dates>0?`<div class="needs-dates-warning">⚠ ${p.needs_dates} steps need dates</div>`:''}
+      <div class="pc-stats">
+        <div class="pc-stat"><div class="pc-stat-num" style="color:var(--on-track)">${p.completed}</div><div class="pc-stat-label">Done</div></div>
+        <div class="pc-stat"><div class="pc-stat-num" style="color:#4a9eff">${p.current}</div><div class="pc-stat-label">Active</div></div>
+        <div class="pc-stat"><div class="pc-stat-num" style="color:#a78bfa">${p.upcoming}</div><div class="pc-stat-label">Ahead</div></div>
+        <div class="pc-stat"><div class="pc-stat-num" style="color:var(--muted)">${p.total}</div><div class="pc-stat-label">Total</div></div>
+      </div>
+      <div class="pc-bar-wrap">
+        <div class="pc-bar-label"><span>${pct}% complete</span><span style="color:var(--muted2)">${p.completed}/${p.total}</span></div>
+        <div class="pc-bar"><div class="pc-bar-fill" style="width:${pct}%;background:${hc.color};"></div></div>
+      </div>
+      <div class="pc-dates"><span style="color:var(--muted)">Timeline:</span> ${fmtDateFull(p.first)} → ${fmtDateFull(p.last)}</div>
+      ${p.health_note?`<div class="pc-health-note">${p.health_note}</div>`:''}
+      ${next3.length?`<div class="pc-next"><strong>Up next:</strong><br>${next3.map(n=>`<span style="color:var(--muted2)">${n}</span>`).join('<br>')}</div>`:''}
+    `;
+    card.addEventListener('click',()=>openProjectDetail(p));
+    grid.appendChild(card);
+  });
+}
+function filterPortfolio(f,btn){
+  portfolioFilter=f;
+  document.querySelectorAll('.pf-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  buildPortfolio();
+}
+
+// ── STATUS / HEALTH VIEW ───────────────────────────────────────
+function buildStatus(){
+  const counts={'at-risk':[],'slipping':[],'on-track':[],'ahead':[]};
+  PROJECTS.forEach(p=>{ if(counts[p.health]) counts[p.health].push(p); });
+
+  document.getElementById('status-subtitle').textContent =
+    `${PROJECTS.filter(p=>p.health==='at-risk').length} at risk · ${PROJECTS.filter(p=>p.health==='slipping').length} slipping · updated ${TODAY.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+
+  // Summary cards
+  const bar = document.getElementById('health-summary-bar');
+  bar.innerHTML = Object.entries(HEALTH_CONFIG).map(([k,v]) => `
+    <div class="hsb-card ${k}" onclick="scrollToSection('${k}')">
+      <div class="hsb-icon">${v.icon}</div>
+      <div class="hsb-num">${counts[k].length}</div>
+      <div class="hsb-label">${v.label}</div>
+      <div class="hsb-sub">${v.desc}</div>
+    </div>
+  `).join('');
+
+  // Sections by health tier
+  const sections = document.getElementById('status-sections');
+  sections.innerHTML = '';
+
+  ['at-risk','slipping','on-track','ahead'].forEach(tier => {
+    const projs = counts[tier];
+    if(!projs.length) return;
+    const hc = HEALTH_CONFIG[tier];
+    const sec = document.createElement('div');
+    sec.className='status-section';
+    sec.id=`section-${tier}`;
+    sec.innerHTML = `
+      <div class="status-section-title">
+        <span style="width:10px;height:10px;border-radius:50%;background:${hc.color};display:inline-block;"></span>
+        <h3 style="color:${hc.color}">${hc.label}</h3>
+        <span style="font-size:11px;color:var(--muted);font-weight:300;">${hc.desc}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--muted)">${projs.length} project${projs.length>1?'s':''}</span>
+      </div>
+    `;
+
+    projs.forEach(p => {
+      const flaggedSteps = STEPS.filter(s=>s.project===p.name && s.health);
+      const color = wfColor(p.workflow);
+      const row = document.createElement('div');
+      row.className='status-project-row';
+      row.innerHTML = `
+        <div class="spr-header" onclick="toggleSteps(this)">
+          <div>
+            <div class="spr-name">${p.name}</div>
+            <div class="spr-workflow" style="color:${color}">${p.workflow}</div>
+          </div>
+          <span class="hbadge ${tier}">${hc.label}</span>
+          <div class="spr-note">${p.health_note||'No notes.'}</div>
+          <div class="spr-expand">
+            ${flaggedSteps.length?`<span>${flaggedSteps.length} flagged step${flaggedSteps.length>1?'s':''}</span>`:''}
+            <span>▾</span>
+          </div>
+        </div>
+        <div class="spr-steps" id="steps-${p.name.replace(/\s+/g,'_')}">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Flagged Steps</div>
+          <div class="spr-steps-grid">
+            ${flaggedSteps.length
+              ? flaggedSteps.map(s => {
+                  const shc = HEALTH_CONFIG[s.health]||{};
+                  return `<div class="step-chip ${s.health}" onclick="openStepPanel(${JSON.stringify(s).replace(/"/g,'&quot;')},${JSON.stringify(p).replace(/"/g,'&quot;')})">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                      <span class="step-chip-id" style="color:${color}">${s.step_id}</span>
+                      <span class="hbadge ${s.health}" style="font-size:9px;padding:1px 7px;">${shc.label||s.health}</span>
+                    </div>
+                    <div class="step-chip-name">${s.step_name}</div>
+                    <div class="step-chip-date">${s.start?fmtDate(s.start)+(s.end&&s.end!==s.start?' → '+fmtDate(s.end):''):'TBC'}</div>
+                  </div>`;
+                }).join('')
+              : '<div style="font-size:11px;color:var(--muted);padding:8px 0;">No specific steps flagged yet.</div>'
+            }
+          </div>
+          <div style="margin-top:12px;">
+            <span style="font-size:11px;color:var(--muted);cursor:pointer;text-decoration:underline;" onclick="openProjectDetail(${JSON.stringify(p).replace(/"/g,'&quot;')})">View all steps →</span>
+          </div>
+        </div>
+      `;
+      sec.appendChild(row);
+    });
+    sections.appendChild(sec);
+  });
+}
+
+function toggleSteps(header){
+  const stepsEl = header.nextElementSibling;
+  stepsEl.classList.toggle('open');
+  const arrow = header.querySelector('.spr-expand span:last-child');
+  if(arrow) arrow.textContent = stepsEl.classList.contains('open') ? '▴' : '▾';
+}
+
+function scrollToSection(tier){
+  const el = document.getElementById(`section-${tier}`);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── THIS WEEK ─────────────────────────────────────────────────
+function buildWeek(){
+  document.getElementById('week-subtitle').textContent =
+    `${THIS_WEEK.length} items across ${[...new Set(THIS_WEEK.map(i=>i.project))].length} projects`;
+  const groups={};
+  THIS_WEEK.forEach(item=>{ if(!groups[item.project]) groups[item.project]=[]; groups[item.project].push(item); });
+  const content=document.getElementById('week-content');
+  content.innerHTML='';
+  Object.entries(groups).forEach(([proj,items])=>{
+    const p=PROJECTS.find(p=>p.name===proj)||{};
+    const color=wfColor(p.workflow||'');
+    const hc=HEALTH_CONFIG[p.health]||null;
+    const div=document.createElement('div');
+    div.className='week-group';
+    div.innerHTML=`
+      <div class="week-group-title">
+        <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;"></span>
+        ${proj}
+        <span class="week-group-badge">${items.length} item${items.length>1?'s':''}</span>
+        ${hc?`<span class="hbadge ${p.health}" style="margin-left:4px;">${hc.label}</span>`:''}
+        <span style="color:var(--muted);font-size:10px;font-weight:300;margin-left:auto;">${p.workflow||''}</span>
+      </div>
+    `;
+    items.forEach(item=>{
+      const row=document.createElement('div');
+      row.className='week-item';
+      const stepHealth=STEPS.find(s=>s.project===proj&&s.step_id===item.step_id);
+      const sh=stepHealth?.health;
+      const shLabel=sh?`<span class="hbadge ${sh}" style="font-size:9px;padding:1px 7px;">${HEALTH_CONFIG[sh]?.label||sh}</span>`:'';
+      row.innerHTML=`
+        <div><div class="wi-name">${item.step_name}</div><div class="wi-step" style="color:${color}">${item.step_id}</div></div>
+        <div class="wi-phase">${item.phase}</div>
+        <div class="wi-date">${item.date_range}</div>
+        <div><span class="wi-status ${statusClass(item.status)}">${item.status}</span></div>
+        <div>${shLabel}</div>
+      `;
+      row.addEventListener('click',()=>openStepPanel(item,p));
+      div.appendChild(row);
+    });
+    content.appendChild(div);
+  });
+}
+
+// ── TIMELINE ─────────────────────────────────────────────────
+const TL_START=new Date('2025-08-01');
+const TL_END=new Date('2027-06-01');
+const TL_DAYS=(TL_END-TL_START)/86400000;
+const TL_LEFT=220;
+let tlFilter='all';
+
+function dayPct(d){
+  if(!d) return null;
+  const dt=new Date(d+'T00:00:00');
+  return ((dt-TL_START)/86400000)/TL_DAYS*100;
+}
+
+function buildTimeline(){
+  const inner=document.getElementById('tl-inner');
+  inner.innerHTML='';
+  const filtered=tlFilter==='all'?PROJECTS:PROJECTS.filter(p=>p.health===tlFilter);
+  const todPct=dayPct(TODAY.toISOString().slice(0,10));
+
+  // Month labels row
+  const mRow=document.createElement('div');
+  mRow.style.cssText=`display:flex;background:var(--s2);border-bottom:1px solid var(--border);height:32px;`;
+  const mLbl=document.createElement('div');
+  mLbl.style.cssText=`width:${TL_LEFT}px;flex-shrink:0;border-right:1px solid var(--border);display:flex;align-items:center;padding:0 16px;font-size:10px;color:var(--muted);`;
+  mLbl.textContent='Project';
+  mRow.appendChild(mLbl);
+  const mArea=document.createElement('div');
+  mArea.style.cssText='flex:1;position:relative;';
+
+  const months=[];
+  let md=new Date(TL_START);
+  while(md<=TL_END){ months.push(new Date(md)); md.setMonth(md.getMonth()+1); }
+  months.forEach(m=>{
+    const pct=dayPct(m.toISOString().slice(0,10));
+    if(pct<0||pct>100) return;
+    const sp=document.createElement('span');
+    sp.className='tl-month-lbl';
+    sp.style.left=pct+'%';
+    sp.textContent=m.toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+    mArea.appendChild(sp);
+    const gl=document.createElement('div');
+    gl.className='tl-month-gl';
+    gl.style.left=pct+'%';
+    mArea.appendChild(gl);
+  });
+
+  if(todPct>=0&&todPct<=100){
+    const tl=document.createElement('div');
+    tl.style.cssText=`position:absolute;left:${todPct}%;top:0;bottom:0;width:2px;background:rgba(240,96,96,.7);z-index:5;`;
+    mArea.appendChild(tl);
+    const tlbl=document.createElement('span');
+    tlbl.style.cssText=`position:absolute;left:calc(${todPct}% + 4px);top:6px;font-size:9px;color:rgba(240,96,96,.9);z-index:6;`;
+    tlbl.textContent='Today';
+    mArea.appendChild(tlbl);
+  }
+  mRow.appendChild(mArea);
+  inner.appendChild(mRow);
+
+  filtered.forEach(p=>{
+    const hc=HEALTH_CONFIG[p.health]||HEALTH_CONFIG['on-track'];
+    const color=hc.color;
+    const row=document.createElement('div');
+    row.className='tl-project-row';
+    row.style.gridTemplateColumns=`${TL_LEFT}px 1fr`;
+    row.innerHTML=`
+      <div class="tl-label">
+        <span class="hbadge ${p.health}" style="font-size:9px;padding:1px 6px;">${hc.label}</span>
+        <span style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span>
+      </div>
+      <div class="tl-bar-area"></div>
+    `;
+    const barArea=row.querySelector('.tl-bar-area');
+    months.forEach(m=>{
+      const pct=dayPct(m.toISOString().slice(0,10));
+      if(pct<0||pct>100) return;
+      const gl=document.createElement('div');
+      gl.className='tl-month-gl';
+      gl.style.left=pct+'%';
+      barArea.appendChild(gl);
+    });
+    if(todPct>=0&&todPct<=100){
+      const tl=document.createElement('div');
+      tl.className='tl-today-line';
+      tl.style.left=todPct+'%';
+      barArea.appendChild(tl);
+    }
+    if(p.first&&p.last){
+      const s=dayPct(p.first),e=dayPct(p.last),w=Math.max(e-s,0.5);
+      const bar=document.createElement('div');
+      bar.className='tl-bar';
+      bar.style.cssText=`left:${s}%;width:${w}%;background:${color};opacity:0.8;color:rgba(0,0,0,0.85);`;
+      if(w>4) bar.textContent=p.name.length>28?p.name.slice(0,28)+'…':p.name;
+      bar.addEventListener('click',()=>openProjectDetail(p));
+      barArea.appendChild(bar);
+    }
+    row.addEventListener('click',()=>openProjectDetail(p));
+    inner.appendChild(row);
+  });
+}
+function setTlFilter(f,btn){
+  tlFilter=f;
+  document.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  buildTimeline();
+}
+
+// ── PROJECT DETAIL ────────────────────────────────────────────
+function openProjectDetail(p){
+  const steps=STEPS.filter(s=>s.project===p.name);
+  const hc=HEALTH_CONFIG[p.health]||HEALTH_CONFIG['on-track'];
+  const color=wfColor(p.workflow);
+  const sc=p.status==='In Progress'?'in-progress':p.status==='Upcoming'?'upcoming':'completed';
+  document.getElementById('detail-content').innerHTML=`
+    <div class="detail-hero">
+      <div class="detail-hero-top">
+        <div>
+          <div style="font-size:11px;color:${color};letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">${p.workflow}</div>
+          <div class="detail-title">${p.name}</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+            <span class="hbadge ${p.health}">${hc.label}</span>
+            <span style="font-size:11px;color:var(--muted)">${fmtDateFull(p.first)} → ${fmtDateFull(p.last)}</span>
+          </div>
+          ${p.health_note?`<div style="margin-top:10px;font-size:12px;color:var(--muted2);max-width:600px;line-height:1.6;padding:10px 14px;background:var(--${p.health}-bg,var(--s2));border-radius:8px;border-left:3px solid ${hc.color};">${p.health_note}</div>`:''}
+        </div>
+        <div class="detail-stats">
+          <div class="detail-stat"><div class="detail-stat-num" style="color:var(--on-track)">${p.completed}</div><div class="detail-stat-label">Completed</div></div>
+          <div class="detail-stat"><div class="detail-stat-num" style="color:#4a9eff">${p.current}</div><div class="detail-stat-label">Active</div></div>
+          <div class="detail-stat"><div class="detail-stat-num" style="color:#a78bfa">${p.upcoming}</div><div class="detail-stat-label">Upcoming</div></div>
+        </div>
+      </div>
+    </div>
+    <table class="steps-table">
+      <thead><tr>
+        <th style="width:8%">ID</th><th style="width:28%">Step</th><th style="width:15%">Phase</th>
+        <th style="width:16%">Team</th><th style="width:14%">Dates</th>
+        <th style="width:10%">Status</th><th style="width:9%">Health</th>
+      </tr></thead>
+      <tbody>
+        ${steps.map(s=>{
+          const shc=HEALTH_CONFIG[s.health];
+          return `<tr style="cursor:pointer;" onclick="openStepPanel(${JSON.stringify(s).replace(/"/g,'&quot;')},${JSON.stringify(p).replace(/"/g,'&quot;')})">
+            <td style="color:${color};font-size:11px;font-weight:500;">${s.step_id}</td>
+            <td style="color:var(--text)">${s.step_name}</td>
+            <td style="color:var(--muted2);font-size:11px;">${s.phase}</td>
+            <td style="color:var(--muted);font-size:11px;">${s.team||'—'}</td>
+            <td style="font-size:11px;color:var(--muted2);">${s.start?fmtDate(s.start)+(s.end&&s.end!==s.start?' → '+fmtDate(s.end):''):'<span style="color:var(--slipping)">TBC</span>'}</td>
+            <td><span class="st-status ${statusClass(s.status)}">${s.status||'—'}</span></td>
+            <td>${shc?`<span class="hbadge ${s.health}" style="font-size:9px;padding:1px 7px;">${shc.label}</span>`:''}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+  document.getElementById('detail-tab').style.display='block';
+  document.getElementById('detail-tab').textContent='← '+p.name;
+  showView('detail');
+}
+
+// ── STEP PANEL ────────────────────────────────────────────────
+function openStepPanel(step,project){
+  const p=typeof project==='string'?JSON.parse(project):project;
+  const s=typeof step==='string'?JSON.parse(step):step;
+  const color=wfColor(p.workflow||'');
+  const shc=HEALTH_CONFIG[s.health];
+  document.getElementById('panel-content').innerHTML=`
+    <div class="panel-project" style="color:${color}">${s.project||p.name}</div>
+    <div class="panel-title">${s.step_name}</div>
+    ${shc?`<div class="panel-health-block ${s.health}">
+      <span class="hbadge ${s.health}">${shc.label}</span>
+      <div class="panel-health-note">${shc.desc}</div>
+    </div>`:''}
+    <div class="panel-section"><div class="panel-label">Step ID</div><div class="panel-value" style="color:${color}">${s.step_id}</div></div>
+    ${s.phase?`<div class="panel-section"><div class="panel-label">Phase</div><div class="panel-value">${s.phase}</div></div>`:''}
+    ${s.team?`<div class="panel-section"><div class="panel-label">Team</div><div class="panel-value">${s.team}</div></div>`:''}
+    <div class="panel-divider"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="panel-section"><div class="panel-label">Start</div><div class="panel-value">${s.start?fmtDateFull(s.start):'<span style="color:var(--slipping)">TBC</span>'}</div></div>
+      <div class="panel-section"><div class="panel-label">End</div><div class="panel-value">${s.end?fmtDateFull(s.end):'<span style="color:var(--slipping)">TBC</span>'}</div></div>
+    </div>
+    <div class="panel-section"><div class="panel-label">Status</div><div class="panel-value"><span class="st-status ${statusClass(s.status)}">${s.status||'—'}</span></div></div>
+    ${s.notes&&s.notes!=='—'?`<div class="panel-divider"></div><div class="panel-section"><div class="panel-label">Notes</div><div class="panel-value" style="color:var(--muted2);font-size:12px;line-height:1.7;">${s.notes}</div></div>`:''}
+    ${s.date_range?`<div class="panel-section"><div class="panel-label">Date Range</div><div class="panel-value">${s.date_range}</div></div>`:''}
+  `;
+  document.getElementById('side-panel').classList.add('open');
+}
+function closePanel(){ document.getElementById('side-panel').classList.remove('open'); }
+
+// ── VIEW SWITCHING ────────────────────────────────────────────
+function showView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(`view-${v}`).classList.add('active');
+  const tab=document.querySelector(`.nav-tab[onclick*="'${v}'"]`);
+  if(tab) tab.classList.add('active');
+  if(v==='timeline') buildTimeline();
+  if(v==='status') buildStatus();
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+buildHealthMini();
+buildPortfolio();
+buildWeek();
+</script>
+</body>
+</html>
